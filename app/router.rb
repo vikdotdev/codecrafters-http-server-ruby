@@ -10,17 +10,18 @@ class Router
     routes << route
   end
 
-  def route(constraint, method:, &block)
+  def route(constraint, method:, exact: false, &block)
     variable_names = []
     constraint.gsub(/:(\w+)/) do |match|
       variable_names << match.slice(1..)
       "([^/]+)"
     end => pattern
 
-    Route.new(constraint, method:, variable_names:, pattern:, &block) => route
-    add(route)
-
-    route
+    add(
+      Route.new(
+        constraint, method:, variable_names:, pattern:, exact:, &block
+      )
+    )
   end
 
   # @param request [Request]
@@ -57,18 +58,22 @@ end
 class Route
   # @param constraint [Regex, String]
   # @param method [Symbol, String]
-  def initialize(constraint, method:, pattern: nil, variable_names: [], &block)
+  def initialize(constraint, method:, exact: false, pattern: nil, variable_names: [], &block)
     @constraint = constraint
     @method = method
-    @pattern = pattern ? /#{pattern}/ : nil
+    @pattern = pattern && !exact ? /#{pattern}/ : pattern
+    @exact = exact
     @variable_names = variable_names
     @block = block
   end
 
-  attr_reader :constraint, :method, :pattern, :variable_names
+  attr_reader :constraint, :method, :pattern, :variable_names, :exact
 
   # What to call when route matches
   def call(request)
+    log(request.inspect)
+    log(self.inspect)
+
     block.call(request)
   end
 
@@ -82,4 +87,9 @@ class Route
   private
 
   attr_reader :block
+
+  def log(...)
+    @logger ||= Logger.new
+    @logger.info(...)
+  end
 end
