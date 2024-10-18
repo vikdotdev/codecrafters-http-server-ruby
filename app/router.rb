@@ -1,11 +1,20 @@
 class Router
   def initialize
     @routes = []
+
+    yield(self)
   end
 
   # @param route [Route]
   def add(route)
     routes << route
+  end
+
+  def route(...)
+    Route.new(...) => route
+    add(route)
+
+    route
   end
 
   # @param request [Request]
@@ -42,11 +51,15 @@ class Route
 
   # What to call when route matches
   def call(request)
+    # TODO pass variables to request
     block.call(request)
   end
 
   # @param path [String]
-  def match?(path) = path.match(constraint)
+  def match?(path)
+    # TODO extract regex variables here as save them
+    path.match(constraint)
+  end
 
   private
 

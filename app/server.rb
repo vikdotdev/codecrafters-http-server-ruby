@@ -1,5 +1,6 @@
 require "socket"
 require_relative "constants"
+require_relative "params"
 require_relative "request"
 require_relative "request_parser"
 require_relative "response"
@@ -11,19 +12,20 @@ logger = Logger.new
 
 logger.info("Listening...")
 
-router = Router.new
-
-Route.new(/\/index.html\Z/, method: :get) do |request|
-  Status.new(200) => status
-  Response.new(status:, headers: Headers.new, body: nil)
-end => route
-router.add(route)
-
-Route.new(/\/\Z/, method: :get) do |request|
-  Status.new(200) => status
-  Response.new(status:, headers: Headers.new, body: nil)
-end => route
-router.add(route)
+router = Router.new do |r|
+  r.route(/\/index.html\Z/, method: :get) do |request|
+    Status.new(200) => status
+    Response.new(status:, headers: Headers.new, body: nil)
+  end
+  r.route(/\/echo\/(.+)\Z/, method: :get) do |request|
+    Status.new(200) => status
+    Response.new(status:, headers: Headers.new, body: nil)
+  end
+  r.route(/\/\Z/, method: :get) do |request|
+    Status.new(200) => status
+    Response.new(status:, headers: Headers.new, body: nil)
+  end
+end
 
 loop do
   Thread.start(server.accept) do |client|
