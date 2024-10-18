@@ -8,8 +8,17 @@ Status = Data.define(:code) do
   end
 end
 
-Header = Data.define(:name, :value) do
-  def to_s = "#{name.to_s.split("_").map(&:capitalize).join("-")}: #{value}#{CRLF}"
+class Header
+  def initialize(name, value)
+    @name = name
+    @value = value
+  end
+
+  attr_reader :name, :value
+
+  def to_s
+    "#{name.to_s.split("_").map(&:capitalize).join("-")}: #{value}#{CRLF}"
+  end
 end
 
 class Headers < Array

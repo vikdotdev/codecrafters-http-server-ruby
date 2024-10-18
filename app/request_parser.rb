@@ -19,7 +19,7 @@ class RequestParser
     normalized_lines.each do |line|
       if line.include?(": ")
         name, value = line.split(": ", 2)
-        headers << Header.new(name:, value:)
+        headers << Header.new(name, value)
       end
     end
 

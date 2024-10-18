@@ -13,15 +13,19 @@ logger = Logger.new
 logger.info("Listening...")
 
 router = Router.new do |r|
-  r.route(/\/index.html\Z/, method: :get) do |request|
+  r.route("/index.html", method: :get) do |request|
     Status.new(200) => status
     Response.new(status:, headers: Headers.new, body: nil)
   end
-  r.route(/\/echo\/(.+)\Z/, method: :get) do |request|
+  r.route("/echo/:message", method: :get) do |request|
     Status.new(200) => status
-    Response.new(status:, headers: Headers.new, body: nil)
+    Headers.new => headers
+    headers << Header.new(:content_type, "text/plain")
+    headers << Header.new(:content_length, request.params["message"].bytesize)
+    Response.new(status:, headers:, body: request.params["message"])
   end
-  r.route(/\/\Z/, method: :get) do |request|
+
+  r.route("/", method: :get) do |request|
     Status.new(200) => status
     Response.new(status:, headers: Headers.new, body: nil)
   end
