@@ -1,5 +1,6 @@
 require "socket"
 require "optparse"
+require "gzip"
 require "pry"
 require_relative "constants"
 require_relative "errors"

@@ -11,8 +11,9 @@ class Encoder
 
   def encode!
     if (encoding = find_supported_encoding)
-      # TODO encode & change content length here
+      response.body.gzip!
       response.headers.upsert("Content-Encoding", encoding)
+      response.headers.upsert("Content-Length", response.body.bytesize)
     else
       # no-op, omit
     end

@@ -114,16 +114,27 @@ class Response
   # @param body [Body, nil]
   def headers_from_body!(body)
     return if body.nil?
+
     @headers << Header.new(:content_type, body.content_type)
-    @headers << Header.new(:content_length, body.data.bytesize)
+    @headers << Header.new(:content_length, body.bytesize)
   end
 end
 
 class Body
-  def initialize(data, content_type = nil)
+  def initialize(data, content_type = nil, compressed: false)
     @data = data
     @content_type = content_type || "text/plain"
+    @compressed = compressed
   end
 
-  attr_reader :data, :content_type
+  def bytesize = @data.bytesize
+
+  def gzip!
+    return data if compressed
+
+    @compressed = true
+    @data = data.gzip
+  end
+
+  attr_reader :data, :content_type, :compressed
 end
