@@ -35,7 +35,7 @@ router = Router.new do |r|
     user_agent = request.headers.find { _1.name == "User-Agent" }
     data = user_agent.value
 
-    if body
+    if data
       response.body = Body.new(data)
       response.ok
     else
