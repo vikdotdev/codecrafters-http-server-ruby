@@ -52,9 +52,8 @@ class Router
       return route
     end
 
-    Route.new(request.path, method: request.method) do |request|
-      Status.new(404) => status
-      Response.new(status:, headers: Headers.new, body: nil)
+    Route.new(request.path, method: request.method) do |_request|
+      Response.new(status: 404)
     end
   end
 
