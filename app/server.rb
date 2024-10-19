@@ -1,4 +1,5 @@
 require "socket"
+require "optparse"
 require "pry"
 require_relative "constants"
 require_relative "params"
@@ -8,8 +9,18 @@ require_relative "response"
 require_relative "router"
 require_relative "logger"
 
-server = TCPServer.new("localhost", 4221)
 logger = Logger.new
+
+options = {}
+OptionParser.new do |opts|
+  opts.on("--directory=DIRECTORY", "Root file directory") do |v|
+    options[:directory] = v
+  end
+end.parse!
+
+logger.info("cli options provided #{options.inspect}")
+
+server = TCPServer.new("localhost", 4221)
 
 logger.info("Listening...")
 
@@ -29,6 +40,24 @@ router = Router.new do |r|
       headers << Header.new(:content_length, body.bytesize)
     end
     Response.new(status:, headers:, body:)
+  end
+
+  r.route("/files/:file_path", method: :get) do |request|
+    file_path = File.join(options[:directory], request.params["file_path"])
+
+    if File.exist?(file_path)
+      File.open(file_path) do |f|
+        Status.new(200) => status
+        Headers.new => headers
+        headers << Header.new(:content_type, "application/octet-stream")
+        headers << Header.new(:content_length, f.size)
+        Response.new(status:, headers:, body: f.read)
+      end
+    else
+      Status.new(404) => status
+      Headers.new => headers
+      Response.new(status:, headers:, body: nil)
+    end
   end
 
   r.route("/echo/:message", method: :get) do |request|
