@@ -17,6 +17,10 @@ class Header
 
   attr_reader :name, :value
 
+  def update(value)
+    @value = normalized_value(value)
+  end
+
   def to_s = "#{name}: #{value}#{CRLF}"
 
   private
@@ -31,6 +35,7 @@ class Header
   def normalized_value(value)
     case name
     when "Content-Length" then value.to_i
+    when "Accept-Encoding" then value.split(", ")
     else value
     end
   end
@@ -41,19 +46,84 @@ class Headers < Array
     super(headers)
   end
 
+  def upsert(name, value)
+    header = find { _1.name == name }
+    if header
+      header.update(value)
+    else
+      self << Header.new(name, value)
+    end
+  end
+
   def to_s = map(&:to_s).join
 end
 
 class Response
+  StatusNotSet = Class.new(ServerError)
+
   # @param status [Integer]
-  def initialize(status:, headers: Headers.new, body: nil)
+  # @param body [Body]
+  def initialize(status: nil, headers: Headers.new, body: nil)
     @status = Status.new(status)
     @headers = headers
     @body = body
+
+    headers_from_body!(body)
   end
 
-  attr_reader :status, :headers, :body
+  attr_reader :status, :body
+  attr_accessor :headers
 
-  def to_s = "#{status_line}#{headers}#{CRLF}#{body}"
-  def status_line = "#{HTTP_VERSION} #{status}"
+  def header(*headers)
+    @headers.concat(headers)
+  end
+
+  # @param body [Body]
+  def body=(body)
+    headers_from_body!(body)
+    @body = body
+  end
+
+  def created
+    @status = Status.new(201)
+  end
+
+  def ok
+    @status = Status.new(200)
+  end
+
+  def not_found
+    @status = Status.new(404)
+  end
+
+  # @param value [Integer]
+  def status=(value)
+    @status = Status.new(value)
+  end
+
+  def to_s = "#{status_line}#{headers}#{CRLF}#{body&.data}"
+
+  def status_line
+    raise StatusNotSet if status.nil?
+
+    "#{HTTP_VERSION} #{status}"
+  end
+
+  private
+
+  # @param body [Body, nil]
+  def headers_from_body!(body)
+    return if body.nil?
+    @headers << Header.new(:content_type, body.content_type)
+    @headers << Header.new(:content_length, body.data.bytesize)
+  end
+end
+
+class Body
+  def initialize(data, content_type = nil)
+    @data = data
+    @content_type = content_type || "text/plain"
+  end
+
+  attr_reader :data, :content_type
 end

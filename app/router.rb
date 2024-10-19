@@ -52,8 +52,8 @@ class Router
       return route
     end
 
-    Route.new(request.path, method: request.method) do |_request|
-      Response.new(status: 404)
+    Route.new(request.path, method: request.method) do |_, response|
+      response.not_found
     end
   end
 
@@ -77,11 +77,14 @@ class Route
   attr_reader :constraint, :method, :pattern, :variable_names, :exact
 
   # What to call when route matches
-  def call(request)
+  # @param request [Request]
+  # @param response [Response]
+  def call(request, response)
     log(request.inspect)
     log(self.inspect)
 
-    block.call(request)
+    block.call(request, response)
+    response
   end
 
   # @param path [String]

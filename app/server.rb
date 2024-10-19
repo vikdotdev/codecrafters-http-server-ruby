@@ -2,11 +2,13 @@ require "socket"
 require "optparse"
 require "pry"
 require_relative "constants"
+require_relative "errors"
 require_relative "params"
 require_relative "request"
 require_relative "request_parser"
 require_relative "response"
 require_relative "router"
+require_relative "encoder"
 require_relative "logger"
 
 logger = Logger.new
@@ -25,81 +27,72 @@ server = TCPServer.new("localhost", 4221)
 logger.info("Listening...")
 
 router = Router.new do |r|
-  r.get("/index.html") do |_request|
-    Response.new(status: 200)
+  r.get("/index.html") do |_, response|
+    response.ok
   end
 
-  r.get("/user-agent") do |request|
+  r.get("/user-agent") do |request, response|
     user_agent = request.headers.find { _1.name == "User-Agent" }
-    body = user_agent.value
+    data = user_agent.value
 
     if body
-      Headers.new(
-        Header.new(:content_type, "text/plain"),
-        Header.new(:content_length, body.bytesize)
-      ) => headers
-
-      Response.new(status: 200, headers:, body:)
+      response.body = Body.new(data)
+      response.ok
     else
-      Response.new(status: 404)
+      response.not_found
     end
   end
 
-  r.get("/files/:file_path") do |request|
+  r.get("/files/:file_path") do |request, response|
     file_path = File.join(options[:directory], request.params["file_path"])
 
     if File.exist?(file_path)
       File.open(file_path) do |f|
-        Headers.new(
-          Header.new(:content_type, "application/octet-stream"),
-          Header.new(:content_length, f.size)
-        ) => headers
-        Response.new(status: 200, headers:, body: f.read)
+        response.body = Body.new(f.read, "application/octet-stream")
+        response.ok
       end
     else
-      Response.new(status: 404)
+      response.not_found
     end
   end
 
-  r.post("/files/:file_path") do |request|
+  r.post("/files/:file_path") do |request, response|
     file_path = File.join(options[:directory], request.params["file_path"])
 
     File.open(file_path, "wb") do |f|
-      f.write(request.body)
-
-      Response.new(status: 201)
+      f.write(request.body.data)
+      response.created
     end
   end
 
-  r.get("/echo/:message") do |request|
+  r.get("/echo/:message") do |request, response|
     body = request.params["message"]
-    Headers.new(
-      Header.new(:content_type, "text/plain"),
-      Header.new(:content_length, body.bytesize)
-    ) => headers
-
-    Response.new(status: 200, headers:, body:)
+    response.body = Body.new(body)
+    response.ok
   end
 
-  r.get("/", exact: true) do |_request|
-    Response.new(status: 200)
+  r.get("/", exact: true) do |_, response|
+    response.ok
   end
 end
 
 loop do
   Thread.start(server.accept) do |client|
-    puts "Received request"
+    logger.info "Received request"
 
     request = RequestParser.new(client).parse
     route = router.resolve(request)
-    response = route.call(request)
+    response = route.call(request, Response.new)
+    Encoder.new(request, response).encode!
 
     logger.info(response.to_s)
     client.puts(response.to_s)
     client.close
 
-    puts "Request completed"
+    logger.info "Request completed"
   end
+rescue ServerError => e
+  logger.error(e.message)
 rescue Interrupt
   puts
   puts 'Exiting'
