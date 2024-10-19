@@ -10,6 +10,14 @@ class Router
     routes << route
   end
 
+  def get(constraint, exact: false, &block)
+    route(constraint, method: :get, exact:, &block)
+  end
+
+  def post(constraint, exact: false, &block)
+    route(constraint, method: :post, exact:, &block)
+  end
+
   def route(constraint, method:, exact: false, &block)
     variable_names = []
     constraint.gsub(/:(\w+)/) do |match|

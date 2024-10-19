@@ -25,53 +25,64 @@ server = TCPServer.new("localhost", 4221)
 logger.info("Listening...")
 
 router = Router.new do |r|
-  r.route("/index.html", method: :get) do |_request|
-    Status.new(200) => status
-    Response.new(status:, headers: Headers.new, body: nil)
+  r.get("/index.html") do |_request|
+    Response.new(status: 200)
   end
 
-  r.route("/user-agent", method: :get) do |request|
+  r.get("/user-agent") do |request|
     user_agent = request.headers.find { _1.name == "User-Agent" }
-    Headers.new => headers
     body = user_agent.value
-    Status.new(body ? 200 : 404) => status
+
     if body
-      headers << Header.new(:content_type, "text/plain")
-      headers << Header.new(:content_length, body.bytesize)
+      Headers.new(
+        Header.new(:content_type, "text/plain"),
+        Header.new(:content_length, body.bytesize)
+      ) => headers
+
+      Response.new(status: 200, headers:, body:)
+    else
+      Response.new(status: 404)
     end
-    Response.new(status:, headers:, body:)
   end
 
-  r.route("/files/:file_path", method: :get) do |request|
+  r.get("/files/:file_path") do |request|
     file_path = File.join(options[:directory], request.params["file_path"])
 
     if File.exist?(file_path)
       File.open(file_path) do |f|
-        Status.new(200) => status
-        Headers.new => headers
-        headers << Header.new(:content_type, "application/octet-stream")
-        headers << Header.new(:content_length, f.size)
-        Response.new(status:, headers:, body: f.read)
+        Headers.new(
+          Header.new(:content_type, "application/octet-stream"),
+          Header.new(:content_length, f.size)
+        ) => headers
+        Response.new(status: 200, headers:, body: f.read)
       end
     else
-      Status.new(404) => status
-      Headers.new => headers
-      Response.new(status:, headers:, body: nil)
+      Response.new(status: 404)
     end
   end
 
-  r.route("/echo/:message", method: :get) do |request|
-    Status.new(200) => status
-    body = request.params["message"]
-    Headers.new => headers
-    headers << Header.new(:content_type, "text/plain")
-    headers << Header.new(:content_length, body.bytesize)
-    Response.new(status:, headers:, body:)
+  r.post("/files/:file_path") do |request|
+    file_path = File.join(options[:directory], request.params["file_path"])
+
+    File.open(file_path, "wb") do |f|
+      f.write(request.body)
+
+      Response.new(status: 201)
+    end
   end
 
-  r.route("/", method: :get, exact: true) do |_request|
-    Status.new(200) => status
-    Response.new(status:, headers: Headers.new, body: nil)
+  r.get("/echo/:message") do |request|
+    body = request.params["message"]
+    Headers.new(
+      Header.new(:content_type, "text/plain"),
+      Header.new(:content_length, body.bytesize)
+    ) => headers
+
+    Response.new(status: 200, headers:, body:)
+  end
+
+  r.get("/", exact: true) do |_request|
+    Response.new(status: 200)
   end
 end
 

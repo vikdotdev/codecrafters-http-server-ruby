@@ -23,7 +23,10 @@ class RequestParser
       end
     end
 
-    Request.new(method:, path:, http_version:, headers:, body: nil)
+    content_length = headers.find { _1.name == "Content-Length" }
+    body = client.read(content_length.value) if content_length&.value&.positive?
+
+    Request.new(method:, path:, http_version:, headers:, body:)
   end
 
   private
