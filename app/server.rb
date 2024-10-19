@@ -19,6 +19,18 @@ router = Router.new do |r|
     Response.new(status:, headers: Headers.new, body: nil)
   end
 
+  r.route("/user-agent", method: :get) do |request|
+    user_agent = request.headers.find { _1.name == "User-Agent" }
+    Headers.new => headers
+    body = user_agent.value
+    Status.new(body ? 200 : 404) => status
+    if body
+      headers << Header.new(:content_type, "text/plain")
+      headers << Header.new(:content_length, body.bytesize)
+    end
+    Response.new(status:, headers:, body:)
+  end
+
   r.route("/echo/:message", method: :get) do |request|
     Status.new(200) => status
     body = request.params["message"]

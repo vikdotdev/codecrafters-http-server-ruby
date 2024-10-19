@@ -10,14 +10,21 @@ end
 
 class Header
   def initialize(name, value)
-    @name = name
+    @name = normalized_name(name)
     @value = value
   end
 
   attr_reader :name, :value
 
-  def to_s
-    "#{name.to_s.split("_").map(&:capitalize).join("-")}: #{value}#{CRLF}"
+  def to_s = "#{name}: #{value}#{CRLF}"
+
+  private
+
+  def normalized_name(name)
+    parts = name.to_s.split("_")
+    return name if parts.size == 1
+
+    parts.map(&:capitalize).join("-")
   end
 end
 
